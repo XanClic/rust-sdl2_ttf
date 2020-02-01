@@ -6,33 +6,28 @@ use std::error::Error;
 use std::ffi::NulError;
 use std::fmt;
 use sdl2::surface::Surface;
-use sdl2_sys::surface::SDL_Surface;
+use sdl2_sys::{SDL_Surface, SDL_Color};
 use sdl2::get_error;
-use sdl2::pixels;
 use sdl2::pixels::Color;
-use sdl2_sys::pixels::SDL_Color;
 use sdl2::rwops::RWops;
 use ffi;
 
 /// Converts a rust-SDL2 color to its C ffi representation.
 #[inline]
 fn color_to_c_color(color: Color) -> SDL_Color {
-    match color {
-        pixels::Color::RGB(r, g, b)     => SDL_Color { r: r, g: g, b: b, a: 255 },
-        pixels::Color::RGBA(r, g, b, a) => SDL_Color { r: r, g: g, b: b, a: a   }
-    }
+    let tuple = color.rgba();
+    SDL_Color { r: tuple.0, g: tuple.1, b: tuple.2, a: tuple.3 }
 }
 
 
-// Absolute paths are a workaround for https://github.com/rust-lang-nursery/bitflags/issues/39 .
 bitflags! {
     /// The styling of a font.
-    pub flags FontStyle: ::std::os::raw::c_int {
-        const STYLE_NORMAL        = ::ffi::TTF_STYLE_NORMAL,
-        const STYLE_BOLD          = ::ffi::TTF_STYLE_BOLD,
-        const STYLE_ITALIC        = ::ffi::TTF_STYLE_ITALIC,
-        const STYLE_UNDERLINE     = ::ffi::TTF_STYLE_UNDERLINE,
-        const STYLE_STRIKETHROUGH = ::ffi::TTF_STYLE_STRIKETHROUGH,
+    pub struct FontStyle: c_int {
+        const STYLE_NORMAL        = ffi::TTF_STYLE_NORMAL;
+        const STYLE_BOLD          = ffi::TTF_STYLE_BOLD;
+        const STYLE_ITALIC        = ffi::TTF_STYLE_ITALIC;
+        const STYLE_UNDERLINE     = ffi::TTF_STYLE_UNDERLINE;
+        const STYLE_STRIKETHROUGH = ffi::TTF_STYLE_STRIKETHROUGH;
     }
 }
 
@@ -80,7 +75,7 @@ impl error::Error for FontError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             FontError::InvalidLatin1Text(ref error) => {
                 Some(error)
@@ -160,7 +155,7 @@ impl<'a> PartialRendering<'a> {
     /// for an explanation.
     pub fn solid<'b, T>(self, color: T )
             -> FontResult<Surface<'b>> where T: Into<Color> {
-        let source = try!(self.text.convert());
+        let source = self.text.convert()?;
         let color = color_to_c_color(color.into());
         let raw = unsafe {
             match self.text {
@@ -182,7 +177,7 @@ impl<'a> PartialRendering<'a> {
     /// for an explanation.
     pub fn shaded<'b, T>(self, color: T, background: T)
             -> FontResult<Surface<'b>> where T: Into<Color> {
-        let source = try!(self.text.convert());
+        let source = self.text.convert()?;
         let foreground = color_to_c_color(color.into());
         let background = color_to_c_color(background.into());
         let raw = unsafe {
@@ -205,7 +200,7 @@ impl<'a> PartialRendering<'a> {
     /// for an explanation.
     pub fn blended<'b, T>(self, color: T)
             -> FontResult<Surface<'b>> where T: Into<Color> {
-        let source = try!(self.text.convert());
+        let source = self.text.convert()?;
         let color = color_to_c_color(color.into());
         let raw = unsafe {
             match self.text {
@@ -228,7 +223,7 @@ impl<'a> PartialRendering<'a> {
     /// for an explanation of the mode.
     pub fn blended_wrapped<'b, T>(self, color: T, wrap_max_width: u32)
             -> FontResult<Surface<'b>> where T: Into<Color> {
-        let source = try!(self.text.convert());
+        let source = self.text.convert()?;
         let color = color_to_c_color(color.into());
         let raw = unsafe {
             match self.text {
@@ -341,7 +336,7 @@ impl<'a> Font<'a> {
     /// font.
     #[allow(unused_mut)]
     pub fn size_of(&self, text: &str) -> FontResult<(u32, u32)> {
-        let c_string = try!(RenderableText::Utf8(text).convert());
+        let c_string = RenderableText::Utf8(text).convert()?;
         let (res, size) = unsafe {
             let mut w = 0; // mutated by C code
             let mut h = 0; // mutated by C code
@@ -360,7 +355,7 @@ impl<'a> Font<'a> {
     #[allow(unused_mut)]
     pub fn size_of_latin1(&self, text: &[u8])
         -> FontResult<(u32, u32)> {
-        let c_string = try!(RenderableText::Latin1(text).convert());
+        let c_string = RenderableText::Latin1(text).convert()?;
         let (res, size) = unsafe {
             let mut w = 0; // mutated by C code
             let mut h = 0; // mutated by C code
