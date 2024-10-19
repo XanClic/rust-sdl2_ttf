@@ -7,14 +7,14 @@ use sdl2::get_error;
 use sdl2::rwops::RWops;
 use sdl2::version::Version;
 
-use font::{
+use crate::font::{
     internal_load_font,
     internal_load_font_at_index,
     internal_load_font_from_ll,
     Font,
 };
 
-use ffi;
+use crate::ffi;
 
 /// A context manager for `SDL2_TTF` to manage C code initialization and clean-up.
 #[must_use]
@@ -86,17 +86,6 @@ pub enum InitError {
 }
 
 impl error::Error for InitError {
-    fn description(&self) -> &str {
-        match *self {
-            InitError::AlreadyInitializedError => {
-                "SDL2_TTF has already been initialized"
-            },
-            InitError::InitializationError(ref error) => {
-                error.description()
-            },
-        }
-    }
-
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             InitError::AlreadyInitializedError => {
@@ -111,7 +100,14 @@ impl error::Error for InitError {
 
 impl fmt::Display for InitError {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        formatter.write_str("SDL2_TTF has already been initialized")
+        match *self {
+            InitError::AlreadyInitializedError => {
+                write!(formatter, "SDL2_TTF has already been initialized")
+            }
+            InitError::InitializationError(ref error) => {
+                write!(formatter, "{error}")
+            }
+        }
     }
 }
 

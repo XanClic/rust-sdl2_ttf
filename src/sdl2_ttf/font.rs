@@ -2,7 +2,6 @@ use std::ffi::{CString, CStr};
 use std::os::raw::{c_int, c_long};
 use std::path::Path;
 use std::error;
-use std::error::Error;
 use std::ffi::NulError;
 use std::fmt;
 use sdl2::surface::Surface;
@@ -10,7 +9,7 @@ use sdl2_sys::{SDL_Surface, SDL_Color};
 use sdl2::get_error;
 use sdl2::pixels::Color;
 use sdl2::rwops::RWops;
-use ffi;
+use crate::ffi;
 
 /// Converts a rust-SDL2 color to its C ffi representation.
 #[inline]
@@ -64,17 +63,6 @@ pub enum FontError {
 }
 
 impl error::Error for FontError {
-    fn description(&self) -> &str {
-        match *self {
-            FontError::InvalidLatin1Text(ref error) => {
-                error.description()
-            },
-            FontError::SdlError(ref message) => {
-                message
-            },
-        }
-    }
-
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             FontError::InvalidLatin1Text(ref error) => {
@@ -91,7 +79,7 @@ impl fmt::Display for FontError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
             FontError::InvalidLatin1Text(ref err) => {
-                write!(f, "Invalid Latin-1 bytes: {}", err.description())
+                write!(f, "Invalid Latin-1 bytes: {err}")
             },
             FontError::SdlError(ref msg) => {
                 write!(f, "SDL2 error: {}", msg)
